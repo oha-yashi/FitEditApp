@@ -91,39 +91,41 @@ public class csvEdit{
 
               int n = 3;
               while(n < data.length){ // 横列を進んで各項目を取得
-                if(data[n].equals("timestamp")){
-                  n++;
-                  String ts = data[n].split("\"")[1];
-                  epochTime = Integer.parseInt(ts) + fitTimeZero;
-                  sb.append( epochToStr(epochTime) ).append(",")
-                          .append(epochTime);
-                }
-                if(data[n].equals("position_lat")){
-                  n++;
-                  String Lat = data[n].split("\"")[1];
-                  lat = parseDouble(Lat) *180 /pow2_31;
-                  sb.append(",").append(myDouble(lat));
-                }
-                if(data[n].equals("position_long")){
-                  n++;
-                  String Lon = data[n].split("\"")[1];
-                  lon = parseDouble(Lon) *180 /pow2_31;
-                  sb.append(",").append(myDouble(lon));
-                }
-                if(data[n].equals("distance")){
-                  n++;
-                  double dd = parseDouble( data[n].split("\"")[1] ) / 1000;
-                  distanceRecord = dd;
-                  sb.append(",").append(myDouble(dd + distanceAlreadyMoved));
-                }
-                if(data[n].equals("altitude")){
-                  n++;
-                  sb.append(",").append( data[n].split("\"")[1] );
-                }
-                if(data[n].equals("speed")){
-                  n++;
-                  sb.append(",").append(myDouble(parseDouble(
-                          data[n].split("\"")[1] ) *3.6));
+                switch (data[n]) {
+                  case "timestamp":
+                    n++;
+                    String ts = data[n].split("\"")[1];
+                    epochTime = Integer.parseInt(ts) + fitTimeZero;
+                    sb.append(epochToStr(epochTime)).append(",")
+                            .append(epochTime);
+                    break;
+                  case "position_lat":
+                    n++;
+                    String Lat = data[n].split("\"")[1];
+                    lat = parseDouble(Lat) * 180 / pow2_31;
+                    sb.append(",").append(myDouble(lat));
+                    break;
+                  case "position_long":
+                    n++;
+                    String Lon = data[n].split("\"")[1];
+                    lon = parseDouble(Lon) * 180 / pow2_31;
+                    sb.append(",").append(myDouble(lon));
+                    break;
+                  case "distance":
+                    n++;
+                    double dd = parseDouble(data[n].split("\"")[1]) / 1000;
+                    distanceRecord = dd;
+                    sb.append(",").append(myDouble(dd + distanceAlreadyMoved));
+                    break;
+                  case "altitude":
+                    n++;
+                    sb.append(",").append(data[n].split("\"")[1]);
+                    break;
+                  case "speed":
+                    n++;
+                    sb.append(",").append(myDouble(parseDouble(
+                            data[n].split("\"")[1]) * 3.6));
+                    break;
                 }
                 n++;
               }
