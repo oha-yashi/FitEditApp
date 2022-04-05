@@ -11,6 +11,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -47,20 +48,18 @@ public class MainActivity extends AppCompatActivity {
         System.setOut(new TextViewPrintStream(System.out, newOut));
         System.setErr(new TextViewPrintStream(System.out, newOut));
 
-        findViewById(R.id.floatingActionButton).setOnClickListener(view -> {
-            openFile();
-        });
+        findViewById(R.id.floatingActionButton).setOnClickListener(view -> openFile());
 
         findViewById(R.id.addEditCSVButton).setOnClickListener(view -> {
             addEditCSV = new AddEditCSV(this);
             addEditCSV.add();
         });
 
+        findViewById(R.id.csvToGPXButton).setOnClickListener(view -> csv2gpx());
+
         // permission check
-        if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-                == PackageManager.PERMISSION_DENIED
-            || checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                == PackageManager.PERMISSION_DENIED){
+        if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED
+            || checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED){
             System.out.println("Permission denied!");
             requestPermissions(new String[]{
                     Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -96,10 +95,20 @@ public class MainActivity extends AppCompatActivity {
         private double lat,lon;
         private double homeArea;
         private int shrink;
+        private String outputFilename;
 
-        private AddEditCSV(Context c) {
+        private final Thread editThread = new Thread(()-> {
+            try {
+                addEditCSV.edit();
+            } catch (IOException e) {
+                handler.post(e::printStackTrace);
+            }
+        });
+
+        public AddEditCSV(Context c) {
             this.context = c;
             this.uriArrayList = new ArrayList<>();
+            this.outputFilename = "new.csv";
         }
 
         public void add(){
@@ -112,18 +121,22 @@ public class MainActivity extends AppCompatActivity {
 
         public void appendToList(Uri uri){
             uriArrayList.add(uri);
+            setOutputFilename();
         }
 
         public void configAndEdit(){
             EditText et = new EditText(context);
             et.setInputType(InputType.TYPE_CLASS_TEXT);
-            et.setHint("35.6851,139.7527");
+            et.setText(R.string.etLatLon); //35.6851,139.7527
             EditText et1 = new EditText(context);
             et1.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-            et1.setHint("10");
+            et1.setText(R.string.et1dist); //0
             EditText et2 = new EditText(context);
             et2.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
-            et2.setHint("30");
+            et2.setText(R.string.et2shrink); //30
+            EditText et3 = new EditText(context);
+            et3.setInputType(InputType.TYPE_CLASS_TEXT);
+            et3.setText(outputFilename);
 
             new AlertDialog.Builder(context).setTitle("非表示設定")
                     .setMessage("latitude,longitude")
@@ -142,19 +155,24 @@ public class MainActivity extends AppCompatActivity {
                     .setView(et2)
                     .setPositiveButton("OK",(d2, i2) -> {
                         shrink = Integer.parseInt( et2.getText().toString() );
-                        new Thread(()-> {
-                            try {
-                                addEditCSV.edit();
-                            } catch (IOException e) {
-                                handler.post(e::printStackTrace);
-                            }
-                        }).start();
+
+            new AlertDialog.Builder(context).setTitle("ファイル名")
+                    .setView(et3)
+                    .setPositiveButton("OK",(d3,i3)-> {
+                        String name = et3.getText().toString();
+                        if(!name.isEmpty()){
+                            outputFilename = name;
+                        }
+                        editThread.start();
+                    })
+                    .show();
             }).show();
             }).show();
             }).show();
         }
 
-        public void edit() throws IOException {
+        private void setOutputFilename(){
+            if(uriArrayList.isEmpty())return;
             String firstFileStartTime = checkStartTime(uriArrayList.get(0));
             String firstFile = getFullPath(uriArrayList.get(0));
             String[] ffSplit = firstFile.split("/");
@@ -163,14 +181,26 @@ public class MainActivity extends AppCompatActivity {
                 sb.append(ffSplit[i]).append("/"); // スラッシュで切ってるので補ってあげないといけない
             }
             sb.append(firstFileStartTime).append(".csv");
-
-            String[] files = new String[uriArrayList.size()+1];
-            files[0] = sb.toString();
-            for(int i=0; i<uriArrayList.size(); i++){
-                files[i+1] = getFullPath(uriArrayList.get(i));
-            }
-            csvEdit.main(handler, files, new GetDistance(lat,lon), homeArea, shrink);
+            outputFilename = sb.toString();
         }
+
+        private void edit() throws IOException {
+            String[] filePaths = new String[uriArrayList.size()+1];
+            filePaths[0] = outputFilename;
+            for(int i=0; i<uriArrayList.size(); i++){
+                filePaths[i+1] = getFullPath(uriArrayList.get(i));
+            }
+            CsvEdit.main(handler, filePaths, new GetDistance(lat,lon), homeArea, shrink);
+        }
+    }
+
+    private static final int CSV_TO_GPX = 40884;
+    private void csv2gpx(){
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/*");
+
+        startActivityForResult(intent,CSV_TO_GPX);
     }
 
     @Override
@@ -200,6 +230,10 @@ public class MainActivity extends AppCompatActivity {
                     .setNegativeButton("いいえ", (dialogInterface, i) -> addEditCSV.configAndEdit());
             AlertDialog dialog = builder.create();
             dialog.show();
+        }else if(requestCode == CSV_TO_GPX){
+            Uri uri = resultData.getData();
+            String input = getFullPath(uri);
+            CsvToGPX.main(handler,new String[]{input});
         }
     }
 
@@ -223,8 +257,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getFullPath(Uri uri){
+        Log.d("getPath",uri.getPath());
         String path = uri.getPath().split(":")[1];
         String root = Environment.getExternalStorageDirectory().getAbsolutePath();
+        Log.d(root,path);
         return root + "/" + path;
     }
 
@@ -246,6 +282,8 @@ public class MainActivity extends AppCompatActivity {
                         Calendar c = Calendar.getInstance();
                         c.setTimeInMillis(epochTime*1000);
                         rtn = sdf.format(c.getTime());
+                        // 1回取得したら抜ける
+                        break;
                     }
                 }
             }
