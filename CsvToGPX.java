@@ -40,13 +40,13 @@ public class CsvToGPX {
             try {
                 BufferedReader br = new BufferedReader(new FileReader(new File(path)));
                 DocumentBuilder db = dbf.newDocumentBuilder();
-                Document document = db.newDocument();
+                Document doc = db.newDocument();
 
                 // xml記述
                 // https://www.kunimiyasoft.com/gpx-format/
                 // http://tancro.e-central.tv/grandmaster/gpx/yamareco-gpx.html
-                Element root = document.createElement("gpx");
-                document.appendChild(root);
+                Element root = doc.createElement("gpx");
+                doc.appendChild(root);
 
                 String text;
                 int segNow = CsvEdit.segmentStart;
@@ -70,24 +70,24 @@ public class CsvToGPX {
                     if(segNow < segNum){
                         // セグメント番号が変わったとき
                         segNow = segNum;
-                        Element trk = document.createElement("trk");
+                        Element trk = doc.createElement("trk");
                         root.appendChild(trk);
-                        Element num = document.createElement("number");
+                        Element num = doc.createElement("number");
                         num.setTextContent(String.valueOf(segNow));
                         trk.appendChild(num);
-                        trkseg = document.createElement("trkseg");
+                        trkseg = doc.createElement("trkseg");
                         trk.appendChild(trkseg);
                         // trkタグを新調する
                     }
 
-                    Element trkpt = document.createElement("trkpt");
+                    Element trkpt = doc.createElement("trkpt");
                     trkpt.setAttribute("lat",data[3]);
                     trkpt.setAttribute("lon",data[4]);
                     trkseg.appendChild(trkpt);
 
-                    Element time = document.createElement("time");
+                    Element time = doc.createElement("time");
                     long epoch = Long.parseLong(data[1]);
-                    time.appendChild(document.createTextNode(epochToGreenwich(epoch)));
+                    time.appendChild(doc.createTextNode(epochToGreenwich(epoch)));
                     trkpt.appendChild(time);
                 }
 
@@ -100,7 +100,7 @@ public class CsvToGPX {
                 if (!gpx.exists()) {
                     gpx.createNewFile();
                 }
-                transformer.transform(new DOMSource(document), new StreamResult(gpx));
+                transformer.transform(new DOMSource(doc), new StreamResult(gpx));
                 handler.post(()->System.out.println("convert " + path + " to GPX"));
             } catch (ParserConfigurationException | IOException | TransformerException e) {
                 handler.post(e::printStackTrace);

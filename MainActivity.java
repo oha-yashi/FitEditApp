@@ -273,18 +273,19 @@ public class MainActivity extends AppCompatActivity {
             String text;
             while((text = br.readLine()) != null){
                 String[] data = text.split(",");
-                if(data[0].equals("Data")&&data[1].equals("8")&&data[2].equals("record")){
-                    if(data[3].equals("timestamp")){
-                        String ts = data[4].split("\"")[1];
-                        long epochTime = Integer.parseInt(ts) + 631065600;
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyMMddHHmmss", Locale.US);
-                        sdf.setTimeZone(TimeZone.getTimeZone("Asia/Tokyo"));
-                        Calendar c = Calendar.getInstance();
-                        c.setTimeInMillis(epochTime*1000);
-                        rtn = sdf.format(c.getTime());
-                        // 1回取得したら抜ける
-                        break;
-                    }
+                if(data[0].equals("Data")
+                && data[1].equals("8")
+                && data[2].equals("record")
+                && data[3].equals("timestamp")){
+                    String ts = data[4].split("\"")[1];
+                    long epochTime = Integer.parseInt(ts) + 631065600;
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyMMddHHmmss", Locale.US);
+                    sdf.setTimeZone(TimeZone.getTimeZone("Asia/Tokyo"));
+                    Calendar c = Calendar.getInstance();
+                    c.setTimeInMillis(epochTime*1000);
+                    rtn = sdf.format(c.getTime());
+                    // 1回取得したら抜ける
+                    break;
                 }
             }
         } catch (IOException e) {

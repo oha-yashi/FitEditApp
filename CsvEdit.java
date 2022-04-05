@@ -30,12 +30,11 @@ public class CsvEdit {
    * @param shrink > 0
    */
   public static void main(Handler handler, String[] args, GetDistance getDistance, double homeArea, int shrink) throws IOException{
+    if(shrink<=0)shrink = 1;
     int lineCount = -1;
     int segmentNum = segmentStart;
-    double lon, lat;
-    lon = getDistance.getZeroPoint()[0];
-    lat = getDistance.getZeroPoint()[1];
-    if(shrink<=0)shrink = 1;
+    double lon = getDistance.getZeroPoint()[0];
+    double lat = getDistance.getZeroPoint()[1];
     String out = "error.csv";
     int argc = args.length;
     if(argc<2){
